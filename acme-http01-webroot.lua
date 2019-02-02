@@ -73,11 +73,11 @@ acme.http01 = function(applet)
 		if (auth and auth:len() >= 1) then
 			response = auth .. "\n"
 			applet:set_status(200)
-			core.Info("[acme] served http-01 token: " .. token .. " (client-ip: " .. tostring(src) .. ")")
+			core.Info("[acme] served http-01 token: " .. token .. " for host " .. host .. " (client-ip: " .. tostring(src) .. ")")
 		else
 			response = "resource not found\n"
 			applet:set_status(404)
-			core.Warning("[acme] http-01 token not found: " .. token .. " (client-ip: " .. tostring(src) .. ")")
+			core.Warning("[acme] http-01 token not found: " .. token .. " for host " .. host .. " (client-ip: " .. tostring(src) .. ")")
 		end
 	end
 
@@ -107,7 +107,7 @@ end
 --
 -- get key auth from token file
 --
-function getKeyAuth(token)
+function getKeyAuth(host, token)
 	local t = {}
 	local url = "http://"..host.."/.well-known/acme-challenge/"..token
 	http.request{url=url, redirect=false, sink=ltn12.sink.table(t)}
