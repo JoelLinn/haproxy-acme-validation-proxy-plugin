@@ -110,10 +110,12 @@ end
 function getKeyAuth(host, token)
 	local t = {}
 	local url = "http://"..host.."/.well-known/acme-challenge/"..token
-	http.request{url=url, redirect=false, sink=ltn12.sink.table(t)}
-	local auth = table.concat(t):match(token.."%.[%d%a_%-%+/=]+")
-
-	return auth
+	local r, c = http.request{url=url, redirect=false, sink=ltn12.sink.table(t)}
+	if c == 200 then
+		return table.concat(t):match(token.."%.[%d%a_%-%+/=]+")
+	else
+		return nil
+	end
 end
 
 core.register_init(acme.startup)
