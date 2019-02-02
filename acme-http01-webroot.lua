@@ -25,6 +25,10 @@
 acme = {}
 acme.version = "0.1.1"
 
+ltn12 = require("ltn12")
+http = require("socket.http")
+http.TIMEOUT = 0.01
+
 --
 -- Configuration
 --
@@ -50,18 +54,23 @@ acme.http01 = function(applet)
 	local reqPath = applet.path
 	local src = applet.sf:src()
 	local token = reqPath:match( ".+/(.*)$" )
+	local host = applet.headers.host
 
 	if token then
 		token = sanitizeToken(token)
 	end
 
-	if (token == nil or token == '') then
+	if (host and host[0]) then
+		host = sanitizeHost(host[0])
+	end
+
+	if (token == nil or token == '' or host == nil or host == '') then
 		response = "bad request\n"
 		applet:set_status(400)
 		core.Warning("[acme] malformed request (client-ip: " .. tostring(src) .. ")")
 	else
-		auth = getKeyAuth(token)
-		if (auth:len() >= 1) then
+		auth = getKeyAuth(host, token)
+		if (auth and auth:len() >= 1) then
 			response = auth .. "\n"
 			applet:set_status(200)
 			core.Info("[acme] served http-01 token: " .. token .. " (client-ip: " .. tostring(src) .. ")")
@@ -89,18 +98,22 @@ function sanitizeToken(token)
 	return token
 end
 
+function sanitizeHost(host)
+	_keep="[%d%a][%d%a_%-%.]*[%d%a]"
+	host = host:match(_keep)
+	return host
+end
+
 --
 -- get key auth from token file
 --
 function getKeyAuth(token)
-        local keyAuth = ""
-        local path = acme.conf.non_chroot_webroot .. "/.well-known/acme-challenge/" .. token
-        local f = io.open(path, "rb")
-        if f ~= nil then
-                keyAuth = f:read("*all")
-                f:close()
-        end
-        return keyAuth
+	local t = {}
+	local url = "http://"..host.."/.well-known/acme-challenge/"..token
+	http.request{url=url, redirect=false, sink=ltn12.sink.table(t)}
+	local auth = table.concat(t):match(token.."%.[%d%a_%-%+/=]+")
+
+	return auth
 end
 
 core.register_init(acme.startup)
