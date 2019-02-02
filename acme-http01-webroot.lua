@@ -114,7 +114,7 @@ function getKeyAuth(host, token)
 	local url = "http://"..host.."/.well-known/acme-challenge/"..token
 	local r, c = http.request{url=url, redirect=false, sink=ltn12.sink.table(t)}
 	if c == 200 then
-		return table.concat(t):match(token.."%.[%d%a_%-%+/=]+")
+		return table.concat(t):match(token:gsub("-","%%-").."%.[%d%a_%-]+")
 	else
 		return nil
 	end
