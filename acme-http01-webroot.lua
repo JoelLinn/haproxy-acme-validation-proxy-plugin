@@ -62,6 +62,8 @@ acme.http01 = function(applet)
 
 	if (host and host[0]) then
 		host = sanitizeHost(host[0])
+	else
+		host = nil
 	end
 
 	if (token == nil or token == '' or host == nil or host == '') then
