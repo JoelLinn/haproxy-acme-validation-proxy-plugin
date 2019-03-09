@@ -27,7 +27,7 @@ acme.version = "0.1.1"
 
 ltn12 = require("ltn12")
 http = require("socket.http")
-http.TIMEOUT = 0.01
+http.TIMEOUT = 1
 
 --
 -- Configuration
