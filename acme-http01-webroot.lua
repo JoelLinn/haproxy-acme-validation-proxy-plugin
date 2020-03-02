@@ -4,14 +4,14 @@
 -- usage:
 --
 -- 1) copy acme-webroot.lua in your haproxy config dir
--- 
+--
 -- 2) Invoke the plugin by adding in the 'global' section of haproxy.cfg:
--- 
+--
 --    lua-load /etc/haproxy/acme-webroot.lua
--- 
+--
 -- 3) insert these two lines in every http frontend that is
 --    serving domains for which you want to create certificates:
--- 
+--
 --    acl url_acme_http01 path_beg /.well-known/acme-challenge/
 --    http-request use-service lua.acme-http01 if METH_GET url_acme_http01
 --
@@ -23,25 +23,24 @@
 --
 
 acme = {}
-acme.version = "0.1.1"
+acme.version = "0.1.2"
 
 ltn12 = require("ltn12")
-http = require("socket.http")
+http = require("ssl.https")
 http.TIMEOUT = 1
 
 --
 -- Configuration
 --
--- When HAProxy is *not* configured with the 'chroot' option you must set an absolute path here and pass 
--- that as 'webroot-path' to the letsencrypt client
+-- When the acme clients use redirects to serve the challenges, you must set enable_redirects to true
 
 acme.conf = {
-	["non_chroot_webroot"] = ""
+	["enable_redirects"] = (os.getenv("ACME_HTTP01_ENABLE_REDIRECTS") == "1" or string.lower(os.getenv("ACME_HTTP01_ENABLE_REDIRECTS")) == "true")
 }
 
 --
 -- Startup
---  
+--
 acme.startup = function()
 	core.Info("[acme] http-01 plugin v" .. acme.version);
 end
@@ -112,9 +111,12 @@ end
 function getKeyAuth(host, token)
 	local t = {}
 	local url = "http://"..host.."/.well-known/acme-challenge/"..token
-	local r, c = http.request{url=url, redirect=false, sink=ltn12.sink.table(t)}
+	local r, c = http.request{url=url, redirect=acme.conf.enable_redirects, sink=ltn12.sink.table(t)}
 	if c == 200 then
 		return table.concat(t):match(token:gsub("-","%%-").."%.[%d%a_%-]+")
+	elseif (c == 301 or c == 302) then
+		core.Info("[acme] http-01 token returns http redirect " .. tostring(c) .. ", but they are disabled.")
+		return nil
 	else
 		return nil
 	end
