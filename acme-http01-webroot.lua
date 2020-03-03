@@ -111,7 +111,9 @@ end
 function getKeyAuth(host, token)
 	local t = {}
 	local url = "http://"..host.."/.well-known/acme-challenge/"..token
-	local r, c = http.request{url=url, redirect=acme.conf.enable_redirects, sink=ltn12.sink.table(t)}
+	-- TODO implement support to disable redirects
+	-- local r, c = http.request{url=url, redirect=acme.conf.enable_redirects, sink=ltn12.sink.table(t)}
+	local r, c = http.request{url=url, sink=ltn12.sink.table(t)}
 	if c == 200 then
 		return table.concat(t):match(token:gsub("-","%%-").."%.[%d%a_%-]+")
 	elseif (c == 301 or c == 302) then
