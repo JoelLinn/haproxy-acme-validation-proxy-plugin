@@ -23,11 +23,10 @@
 --
 
 acme = {}
-acme.version = "0.1.2"
+acme.version = "0.1.3"
 
-ltn12 = require("ltn12")
-http = require("ssl.https")
-http.TIMEOUT = 1
+-- A more recent version 3 of Lua-cURL is required for the API used
+cURL = require("cURL")
 
 --
 -- Configuration
@@ -111,15 +110,37 @@ end
 function getKeyAuth(host, token)
 	local t = {}
 	local url = "http://"..host.."/.well-known/acme-challenge/"..token
-	-- TODO implement support to disable redirects
-	-- local r, c = http.request{url=url, redirect=acme.conf.enable_redirects, sink=ltn12.sink.table(t)}
-	local r, c = http.request{url=url, sink=ltn12.sink.table(t)}
-	if c == 200 then
+	local r = ""
+	c = cURL.easy{
+		url            = url,
+		ssl_verifypeer = false,
+		ssl_verifyhost = false,
+		followlocation = acme.conf.enable_redirects,
+		writefunction  = function(str)
+		  r = r..str
+		  return string.len(r) <= 1024
+		end
+	}
+	function curlperform()
+		c:perform()
+	end
+	function curlerror(err)
+		core.Info("[acme] Curl error: "..tostring(err))
+	end
+	if not xpcall(curlperform, curlerror) then
+		c:close()
+		return nil
+	end
+	local s = c:getinfo(cURL.INFO_RESPONSE_CODE)
+	c:close()
+
+	if s == 200 then
 		return table.concat(t):match(token:gsub("-","%%-").."%.[%d%a_%-]+")
-	elseif (c == 301 or c == 302) then
+	elseif (s == 301 or s == 302) then
 		core.Info("[acme] http-01 token returns http redirect " .. tostring(c) .. ", but they are disabled.")
 		return nil
 	else
+		core.Info("[acme] http-01 token returns http code " .. tostring(c) .. ".")
 		return nil
 	end
 end
