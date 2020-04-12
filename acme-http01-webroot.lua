@@ -34,7 +34,8 @@ cURL = require("cURL")
 -- When the acme clients use redirects to serve the challenges, you must set enable_redirects to true
 
 acme.conf = {
-	["enable_redirects"] = (os.getenv("ACME_HTTP01_ENABLE_REDIRECTS") == "1" or string.lower(os.getenv("ACME_HTTP01_ENABLE_REDIRECTS")) == "true")
+	["enable_redirects"] = (os.getenv("ACME_HTTP01_ENABLE_REDIRECTS") == "1" or string.lower(os.getenv("ACME_HTTP01_ENABLE_REDIRECTS")) == "true"),
+	["timeout"] = tonumber(os.getenv("ACME_TIMEOUT")),
 }
 
 --
@@ -120,10 +121,13 @@ function getKeyAuth(host, token)
 		  return string.len(r) <= 1024
 		end
 	}
-	function curlperform()
+	if acme.conf.timeout then
+		c:setopt_timeout_ms(acme.conf.timeout)
+	end
+	local function curlperform()
 		c:perform()
 	end
-	function curlerror(err)
+	local function curlerror(err)
 		core.Info("[acme] Curl error: "..tostring(err))
 	end
 	if not xpcall(curlperform, curlerror) then
@@ -135,11 +139,11 @@ function getKeyAuth(host, token)
 
 	if s == 200 then
 		return r:match(token:gsub("-","%%-").."%.[%d%a_%-]+")
-	elseif (s == 301 or s == 302) then
-		core.Info("[acme] http-01 token returns http redirect " .. tostring(c) .. ", but they are disabled.")
+	elseif (s >= 300 and s <= 399) then
+		core.Info("[acme] http-01 token returns http redirect " .. tostring(s) .. ", but they are disabled.")
 		return nil
 	else
-		core.Info("[acme] http-01 token returns http code " .. tostring(c) .. ".")
+		core.Info("[acme] http-01 token returns http code " .. tostring(s) .. ".")
 		return nil
 	end
 end
