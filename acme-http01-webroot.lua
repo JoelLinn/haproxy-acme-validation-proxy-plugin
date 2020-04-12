@@ -108,7 +108,6 @@ end
 -- get key auth from token file
 --
 function getKeyAuth(host, token)
-	local t = {}
 	local url = "http://"..host.."/.well-known/acme-challenge/"..token
 	local r = ""
 	c = cURL.easy{
@@ -135,7 +134,7 @@ function getKeyAuth(host, token)
 	c:close()
 
 	if s == 200 then
-		return table.concat(t):match(token:gsub("-","%%-").."%.[%d%a_%-]+")
+		return r:match(token:gsub("-","%%-").."%.[%d%a_%-]+")
 	elseif (s == 301 or s == 302) then
 		core.Info("[acme] http-01 token returns http redirect " .. tostring(c) .. ", but they are disabled.")
 		return nil
