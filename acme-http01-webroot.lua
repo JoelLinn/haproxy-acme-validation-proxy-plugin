@@ -65,7 +65,7 @@ acme.http01 = function(applet)
 		host = nil
 	end
 
-	if (token == nil or token == '' or host == nil or host == '') then
+	if (token == nil or token == '' or host == nil or host == '' or host == 'localhost') then
 		response = "bad request\n"
 		applet:set_status(400)
 		core.Warning("[acme] malformed request (client-ip: " .. tostring(src) .. ")")
