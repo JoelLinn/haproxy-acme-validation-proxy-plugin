@@ -1,3 +1,7 @@
+# Deprecated
+
+See [JoelLinn/acme-proxy](https://github.com/JoelLinn/acme-proxy) instead.
+
 ## `HAProxy` ACME domain validation plugin
 
 [![License](https://img.shields.io/github/license/JoelLinn/haproxy-acme-validation-proxy-plugin.svg?maxAge=2592000)]()
